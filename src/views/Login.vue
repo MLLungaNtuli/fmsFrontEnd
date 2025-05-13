@@ -39,25 +39,40 @@ export default {
     return { toast };
   },
   methods: {
-    async login() {
-      try {
-        const res = await api.post('/Auth/login', {
-          email: this.email,
-          password: this.password,
-        });
+  async login() {
+    try {
+      const res = await api.post('/Auth/login', {
+        email: this.email,
+        password: this.password,
+      });
 
-        localStorage.setItem('token', res.data.token);
+      localStorage.setItem('token', res.data.token);
+
+      //Show success toast
+      this.toast.add({
+        severity: 'success',
+        summary: 'Login Successful',
+        detail: 'Welcome back!',
+        life: 3000,
+      });
+
+      // Navigate to dashboard after a short delay
+      setTimeout(() => {
         this.$router.push('/dashboard');
-      } catch (err) {
-        this.toast.add({
-          severity: 'error',
-          summary: 'Login Failed',
-          detail: err.response?.data || 'Invalid credentials',
-          life: 3000,
-        });
-      }
-    },
+      }, 1000);
+
+    } catch (err) {
+      //Show error toast
+      this.toast.add({
+        severity: 'error',
+        summary: 'Login Failed',
+        detail: err.response?.data || 'Invalid credentials',
+        life: 3000,
+      });
+    }
   },
+},
+
 };
 </script>
 
