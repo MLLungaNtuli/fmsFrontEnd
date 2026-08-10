@@ -1,162 +1,395 @@
 <template>
-  <div class="layout-wrapper">
-    <!-- Top bar for toggle button -->
-    <div>
-      <Button
-        icon="pi pi-bars"
-        class="p-button-text toggle-button"
-        @click="toggleSidebar"
-      />
-    </div>
+  <aside
+    class="app-sidebar"
+    :class="{
+      collapsed: !isOpen,
+      dark: isDarkMode,
+    }"
+  >
+    <div class="sidebar-inner">
+      <!-- Logo (expanded/collapsed) -->
+      <div class="sidebar-logo" v-if="isOpen">
+        <i class="pi pi-car"></i>
+        <span>Fleet<span class="highlight">Manager</span></span>
+      </div>
+      <div class="sidebar-logo collapsed-logo" v-else>
+        <i class="pi pi-car"></i>
+      </div>
 
-    <!-- Sidebar transition and container -->
-    <transition name="slide">
-      <aside v-if="isOpen" class="sidebar">
-        <PanelMenu :model="menuItems" class="custom-panel" />
-      </aside>
-    </transition>
-  </div>
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <ul class="nav-list">
+          <li
+            v-for="item in menuItems"
+            :key="item.label"
+            class="nav-item"
+            :class="{
+              active: isActive(item),
+              'has-children': item.items,
+              'open': isOpen && openSections.includes(item.label),
+            }"
+          >
+            <div
+              class="nav-link"
+              @click="handleNavClick(item)"
+              :title="!isOpen ? item.label : ''"
+            >
+              <i :class="item.icon"></i>
+              <span v-if="isOpen" class="nav-label">{{ item.label }}</span>
+              <i
+                v-if="item.items && isOpen"
+                class="pi pi-chevron-down nav-chevron"
+                :class="{ rotated: openSections.includes(item.label) }"
+                @click.stop="toggleSection(item.label)"
+              ></i>
+            </div>
+
+            <!-- Submenu -->
+            <transition name="expand">
+              <ul v-if="item.items && isOpen && openSections.includes(item.label)" class="subnav-list">
+                <li
+                  v-for="sub in item.items"
+                  :key="sub.label"
+                  class="subnav-item"
+                  :class="{ active: isActive(sub) }"
+                >
+                  <router-link :to="sub.route" class="subnav-link">
+                    <i :class="sub.icon"></i>
+                    <span>{{ sub.label }}</span>
+                  </router-link>
+                </li>
+              </ul>
+            </transition>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Footer -->
+      <div v-if="isOpen" class="sidebar-footer">
+        <div class="version">v2.4.0</div>
+        <div class="help-link">
+          <i class="pi pi-question-circle"></i> Help
+        </div>
+      </div>
+    </div>
+  </aside>
 </template>
 
-
 <script setup>
-import { ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import Button from 'primevue/button'
-import PanelMenu from 'primevue/panelmenu'
+import { ref, computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useStore } from 'vuex';
 
-const emit = defineEmits(['toggle'])
+defineProps({
+  isOpen: Boolean,
+  isDarkMode: Boolean,
+});
 
-const isOpen = ref(true)
+const emit = defineEmits(['close']);
 
-const toggleSidebar = () => {
-  isOpen.value = !isOpen.value
-  emit('toggle', isOpen.value)
-}
+const router = useRouter();
+const route = useRoute();
+const store = useStore();
 
-const router = useRouter()
+const openSections = ref([]);
 
-const menuItems = [
-  { label: 'Dashboard', icon: 'pi pi-home', command: () => router.push('/dashboard') },
-  { label: 'Vehicles', icon: 'pi pi-car', command: () => router.push('/vehicles') },
-  { label: 'Refuel Logs', icon:'pi pi-align-justify', command: () => router.push('/refuel-logs') },
-  { label: 'Alerts', icon: 'pi pi-bell', command: () => router.push('/alerts') },
-  { label: 'Settings', icon: 'pi pi-cog', command: () => router.push('/settings') },
-]
+// Build menu items based on user roles
+const menuItems = computed(() => {
+  const roles = store.getters['auth/userRoles'] || [];
+  const items = [
+    { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard' },
+    { label: 'Vehicles', icon: 'pi pi-car', route: '/vehicles' },
+  ];
+
+  if (roles.some(r => ['Admin', 'FleetManager'].includes(r))) {
+    items.push({
+      label: 'Drivers',
+      icon: 'pi pi-users',
+      items: [
+        { label: 'All Drivers', icon: 'pi pi-list', route: '/drivers' },
+        { label: 'Performance', icon: 'pi pi-chart-bar', route: '/drivers/performance' },
+        { label: 'Certifications', icon: 'pi pi-id-card', route: '/drivers/certifications' },
+      ],
+    });
+  }
+
+  if (roles.some(r => ['Admin', 'FuelClerk', 'FleetManager'].includes(r))) {
+    items.push({ label: 'Refuel Logs', icon: 'pi pi-align-justify', route: '/refuel-logs' });
+  }
+
+  if (roles.some(r => ['Admin', 'MaintenanceManager', 'FleetManager'].includes(r))) {
+    items.push({ label: 'Maintenance', icon: 'pi pi-wrench', route: '/maintenance' });
+  }
+
+  if (roles.some(r => ['Admin', 'FleetManager'].includes(r))) {
+    items.push({ label: 'Alerts', icon: 'pi pi-bell', route: '/alerts' });
+  }
+
+  if (roles.includes('Admin')) {
+    items.push({ label: 'Settings', icon: 'pi pi-cog', route: '/settings' });
+  }
+
+  return items;
+});
+
+const isActive = (item) => {
+  if (item.route) {
+    return route.path === item.route;
+  }
+  if (item.items) {
+    return item.items.some(sub => route.path === sub.route);
+  }
+  return false;
+};
+
+const handleNavClick = (item) => {
+  if (item.route) {
+    router.push(item.route);
+    emit('close');
+  }
+  if (item.items) {
+    toggleSection(item.label);
+  }
+};
+
+const toggleSection = (label) => {
+  const idx = openSections.value.indexOf(label);
+  if (idx > -1) {
+    openSections.value.splice(idx, 1);
+  } else {
+    openSections.value.push(label);
+  }
+};
 </script>
 
 <style scoped>
-.sidebar {
-  width: 250px;
-  background-color: #2c3e50;
-  color: #ecf0f1;
-  height: 100vh;
+.app-sidebar {
   position: fixed;
-  top: 0;
+  top: 64px; /* header height */
   left: 0;
-  z-index: 10;
+  bottom: 0;
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.3s;
+  z-index: 90;
   overflow-y: auto;
-  padding: 1rem;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  overflow-x: hidden;
 }
 
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    left: 0;
-    width: 80%;
-    max-width: 300px;
-    z-index: 30;
-  }
-
-  .main-content {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
+.app-sidebar.dark {
+  background: #1f2937;
+  border-right-color: #374151;
 }
 
-.toggle-button {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 20;
-  background-color: #2c3e50;
-  color: #ecf0f1;
+.app-sidebar.collapsed {
+  width: 72px;
 }
 
-.custom-panel ::v-deep(.p-panelmenu .p-menuitem-link) {
-  color: #ecf0f1;
-  padding: 1rem;
-}
-
-.custom-panel ::v-deep(.p-panelmenu .p-menuitem-link:hover) {
-  background-color: #34495e;
-}
-
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-  transform: translateX(-100%);
-}
-
-.layout-wrapper {
+.sidebar-inner {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  padding: 0.5rem 0;
 }
 
-.top-bar {
-  background-color: #2c3e50;
-  padding: 0.5rem 1rem;
+/* Logo */
+.sidebar-logo {
   display: flex;
   align-items: center;
-  height: 50px;
-  z-index: 20;
-  position: sticky;
-  top: 0;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #111827;
+  transition: opacity 0.2s;
+}
+.sidebar-logo i {
+  font-size: 1.4rem;
+  color: #6366f1;
+}
+.sidebar-logo .highlight {
+  color: #6366f1;
+}
+.collapsed-logo {
+  justify-content: center;
+  padding: 0.75rem 0;
+}
+.dark .sidebar-logo {
+  color: #f9fafb;
 }
 
-.toggle-button {
-  color: #fff;
+/* Navigation */
+.sidebar-nav {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+}
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.nav-item {
+  margin-bottom: 0.15rem;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  gap: 0.75rem;
+}
+.nav-link:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+.dark .nav-link:hover {
+  background: #374151;
+  color: #f3f4f6;
+}
+.nav-item.active > .nav-link {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.dark .nav-item.active > .nav-link {
+  background: #312e81;
+  color: #a5b4fc;
+}
+.nav-link i:first-child {
+  font-size: 1.2rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+.nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.nav-chevron {
+  font-size: 0.65rem;
+  transition: transform 0.2s;
+  margin-left: auto;
+}
+.nav-chevron.rotated {
+  transform: rotate(180deg);
 }
 
-.sidebar {
-  width: 250px;
-  background-color: #2c3e50;
-  color: #ecf0f1;
-  height: 100vh;
-  overflow-y: auto;
-  padding: 1rem;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  position: fixed;
-  top: 50px; /* Moves sidebar below the top bar */
-  left: 0;
+/* Submenu */
+.subnav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.15rem 0 0.3rem 1.5rem;
+  overflow: hidden;
+}
+.subnav-item {
+  margin-bottom: 0.1rem;
+}
+.subnav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background 0.15s, color 0.15s;
+}
+.subnav-link:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+.dark .subnav-link:hover {
+  background: #374151;
+  color: #f3f4f6;
+}
+.subnav-item.active .subnav-link {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.dark .subnav-item.active .subnav-link {
+  background: #312e81;
+  color: #a5b4fc;
+}
+.subnav-link i {
+  font-size: 0.9rem;
+  width: 1.25rem;
+  text-align: center;
 }
 
-.custom-panel ::v-deep(.p-panelmenu .p-menuitem-link) {
-  color: #ecf0f1;
-  padding: 1rem;
+/* Expand animation */
+.expand-enter-active,
+.expand-leave-active {
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  max-height: 500px;
+  opacity: 1;
+}
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
 }
 
-.custom-panel ::v-deep(.p-panelmenu .p-menuitem-link:hover) {
-  background-color: #34495e;
+/* Sidebar Footer */
+.sidebar-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: auto;
+}
+.dark .sidebar-footer {
+  border-top-color: #374151;
+  color: #9ca3af;
+}
+.help-link {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.help-link:hover {
+  color: #111827;
+}
+.dark .help-link:hover {
+  color: #f3f4f6;
 }
 
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease;
+/* Scrollbar */
+.app-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.app-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-sidebar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+.dark .app-sidebar::-webkit-scrollbar-thumb {
+  background: #4b5563;
 }
 
-.slide-enter-from,
-.slide-leave-to {
-  transform: translateX(-100%);
+/* Responsive: overlay on mobile */
+@media (max-width: 768px) {
+  .app-sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+  }
+  .app-sidebar.open-mobile {
+    transform: translateX(0);
+  }
 }
-
-
-
 </style>

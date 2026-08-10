@@ -1,17 +1,50 @@
 // src/axios.js
 import axios from 'axios';
+import store from './store';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5093/api', // your .NET API base URL
+  baseURL: 'http://localhost:5093/api',
+  withCredentials: true,
+  timeout: 30000,
 });
 
-// Optional: Attach token to every request if available
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor – attach token if exists
+api.interceptors.request.use(
+  config => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
+
+// Response interceptor – refresh token on 401 and retry once
+api.interceptors.response.use(
+  response => response,
+  async error => {
+    const originalRequest = error.config;
+
+    // Check if 401 and not already retried
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const newToken = await store.dispatch('auth/refreshToken');
+
+        // ✅ Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // ❌ Refresh failed — logout user
+        store.dispatch('auth/logout');
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export default api;

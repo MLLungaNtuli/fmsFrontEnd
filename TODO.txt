@@ -1,0 +1,3 @@
+REFUEL LOGS
+
+The map integration isn't working because your refuel logs likely don't have latitude/longitude coordinates stored. Here are several practical solutions to implement station mapping:

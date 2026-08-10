@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="alerts-pie-chart" style="height: 400px">
     <h3>Alerts by Type</h3>
     <Chart type="pie" :data="chartData" :options="chartOptions" />
   </div>
