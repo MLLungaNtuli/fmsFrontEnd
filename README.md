@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # fmsPortal
 
 This template should help get you started developing with Vue 3 in Vite.
@@ -27,3 +28,6 @@ npm run dev
 ```sh
 npm run build
 ```
+=======
+# fmsFrontEnd
+>>>>>>> cbf45cbbf5dd0bd03e1b791e7ee830492651d711
