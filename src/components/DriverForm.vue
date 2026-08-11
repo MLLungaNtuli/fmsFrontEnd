@@ -188,22 +188,16 @@
 </template>
 
 <script setup>
-defineProps({
-  driver: {
-    type: Object,
-    required: true
-  },
-  errors: {
-    type: Object,
-    default: () => ({})
-  }
-});
+
 
 import { ref, computed } from 'vue';
 
-const props = defineProps({
-  modelValue: Boolean
-});
+const props = defineProps<{ 
+  modelValue: boolean; 
+  driver: DriverForm; 
+  errors?: ValidationErrors; 
+  loading?: boolean; 
+}>();
 
 
 const emit = defineEmits(['update:modelValue', 'save', 'cancel']);
