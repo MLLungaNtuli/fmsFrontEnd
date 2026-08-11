@@ -1,243 +1,410 @@
 <template>
-  <Dialog 
-    :visible="modelValue" 
-    @update:visible="$emit('update:modelValue', $event)"
-    header="Add New Driver" 
+  <Dialog
+    :visible="modelValue"
+    header="Add New Driver"
     :modal="true"
+    :closable="!isLoading"
     :style="{ width: '50vw' }"
+    :breakpoints="{ '960px': '75vw', '641px': '95vw' }"
+    @update:visible="onDialogUpdate"
   >
     <div class="form-grid">
+      <!-- First Name -->
       <div class="field">
-      <label for="firstName">First Name *</label>
-      <InputText 
-        v-model="driver.firstName" 
-        placeholder="First Name"
-        class="w-full"
-        :class="{ 'p-invalid': errors.firstName }"
-      />
-      <small v-if="errors.firstName" class="p-error">{{ errors.firstName[0] }}</small>
-    </div>
+        <label for="firstName">First Name *</label>
+        <InputText
+          id="firstName"
+          v-model="formData.firstName"
+          placeholder="First Name"
+          class="w-full"
+          :class="{ 'p-invalid': hasError('firstName') }"
+          :disabled="isLoading"
+          autocomplete="given-name"
+          required
+        />
+        <small v-if="hasError('firstName')" class="p-error">
+          {{ getError('firstName') }}
+        </small>
+      </div>
 
+      <!-- Last Name -->
       <div class="field">
-      <label for="lastName">Last Name *</label>
-      <InputText 
-        v-model="driver.lastName" 
-        placeholder="Last Name"
-        class="w-full"
-        :class="{ 'p-invalid': errors.lastName }"
-      />
-      <small v-if="errors.lastName" class="p-error">{{ errors.lastName[0] }}</small>
-    </div>
+        <label for="lastName">Last Name *</label>
+        <InputText
+          id="lastName"
+          v-model="formData.lastName"
+          placeholder="Last Name"
+          class="w-full"
+          :class="{ 'p-invalid': hasError('lastName') }"
+          :disabled="isLoading"
+          autocomplete="family-name"
+          required
+        />
+        <small v-if="hasError('lastName')" class="p-error">
+          {{ getError('lastName') }}
+        </small>
+      </div>
 
+      <!-- Email -->
       <div class="field">
         <label for="email">Email *</label>
-        <InputText 
-          v-model="driver.email" 
+        <InputText
+          id="email"
+          v-model="formData.email"
+          type="email"
           placeholder="Email"
           class="w-full"
-          :class="{ 'p-invalid': errors.email }"
+          :class="{ 'p-invalid': hasError('email') }"
+          :disabled="isLoading"
+          autocomplete="email"
+          required
         />
-       <small v-if="errors.email" class="p-error">{{ errors.email[0] }}</small>
-
+        <small v-if="hasError('email')" class="p-error">
+          {{ getError('email') }}
+        </small>
       </div>
 
+      <!-- Phone -->
       <div class="field">
-        <label for="phone">Phone</label>
-        <InputMask 
-          v-model="driver.phoneNumber" 
-          mask="(999) 999-9999" 
+        <label for="phoneNumber">Phone</label>
+        <InputMask
+          id="phoneNumber"
+          v-model="formData.phoneNumber"
+          mask="(999) 999-9999"
           placeholder="(123) 456-7890"
           class="w-full"
-          :class="{ 'p-invalid': errors.phoneNumber }"
+          :class="{ 'p-invalid': hasError('phoneNumber') }"
+          :disabled="isLoading"
+          autocomplete="tel"
         />
-       <small v-if="errors.phoneNumber" class="p-error">{{ errors.phoneNumber[0] }}</small>
+        <small v-if="hasError('phoneNumber')" class="p-error">
+          {{ getError('phoneNumber') }}
+        </small>
       </div>
 
+      <!-- Address -->
       <div class="field col-span-2">
         <label for="address">Address</label>
-        <InputText 
-          v-model="driver.address" 
+        <InputText
+          id="address"
+          v-model="formData.address"
           placeholder="Address"
           class="w-full"
-          :class="{ 'p-invalid': errors.address }"
+          :class="{ 'p-invalid': hasError('address') }"
+          :disabled="isLoading"
+          autocomplete="street-address"
         />
-       <small v-if="errors.address" class="p-error">{{ errors.address[0] }}</small>
+        <small v-if="hasError('address')" class="p-error">
+          {{ getError('address') }}
+        </small>
       </div>
 
+      <!-- Date of Birth -->
       <div class="field">
-        <label for="dob">Date of Birth *</label>
-        <Calendar 
-          v-model="driver.dateOfBirth" 
+        <label for="dateOfBirth">Date of Birth *</label>
+        <Calendar
+          id="dateOfBirth"
+          v-model="formData.dateOfBirth"
           dateFormat="yy-mm-dd"
           showIcon
           class="w-full"
-          :class="{ 'p-invalid': errors.dateFormat }"
+          :class="{ 'p-invalid': hasError('dateOfBirth') }"
+          :disabled="isLoading"
+          :maxDate="today"
+          required
         />
-       <small v-if="errors.dateFormat" class="p-error">{{ errors.dateFormat[0] }}</small>
+        <small v-if="hasError('dateOfBirth')" class="p-error">
+          {{ getError('dateOfBirth') }}
+        </small>
       </div>
 
+      <!-- Hire Date -->
       <div class="field">
         <label for="hireDate">Hire Date *</label>
-        <Calendar 
-          v-model="driver.hireDate " 
+        <Calendar
+          id="hireDate"
+          v-model="formData.hireDate"
           dateFormat="yy-mm-dd"
           showIcon
           class="w-full"
-          :class="{ 'p-invalid': errors.hireDate }"
+          :class="{ 'p-invalid': hasError('hireDate') }"
+          :disabled="isLoading"
+          required
         />
-       <small v-if="errors.hireDate" class="p-error">{{ errors.hireDate[0] }}</small>
+        <small v-if="hasError('hireDate')" class="p-error">
+          {{ getError('hireDate') }}
+        </small>
       </div>
 
+      <!-- License Number -->
       <div class="field">
-        <label for="license">License Number</label>
-        <InputText 
-          v-model="driver.licenseNumber" 
+        <label for="licenseNumber">License Number</label>
+        <InputText
+          id="licenseNumber"
+          v-model="formData.licenseNumber"
           placeholder="License Number"
           class="w-full"
-          :class="{ 'p-invalid': errors.licenseNumber }"
+          :class="{ 'p-invalid': hasError('licenseNumber') }"
+          :disabled="isLoading"
         />
-       <small v-if="errors.licenseNumber" class="p-error">{{ errors.licenseNumber[0] }}</small>
+        <small v-if="hasError('licenseNumber')" class="p-error">
+          {{ getError('licenseNumber') }}
+        </small>
       </div>
 
+      <!-- License Expiry -->
       <div class="field">
         <label for="licenseExpiry">License Expiry</label>
-        <Calendar 
-          v-model="driver.licenseExpiry" 
+        <Calendar
+          id="licenseExpiry"
+          v-model="formData.licenseExpiry"
           dateFormat="yy-mm-dd"
           showIcon
           class="w-full"
-          :class="{ 'p-invalid': errors.licenseExpiry }"
+          :class="{ 'p-invalid': hasError('licenseExpiry') }"
+          :disabled="isLoading"
         />
-       <small v-if="errors.licenseExpiry" class="p-error">{{ errors.licenseExpiry[0] }}</small>
+        <small v-if="hasError('licenseExpiry')" class="p-error">
+          {{ getError('licenseExpiry') }}
+        </small>
       </div>
 
+      <!-- Medical Certificate Number -->
       <div class="field">
-        <label for="medicalCert">Medical Cert. #</label>
-        <InputText 
-          v-model="driver.medicalCertificateNumber" 
+        <label for="medicalCertificateNumber">
+          Medical Cert. #
+        </label>
+        <InputText
+          id="medicalCertificateNumber"
+          v-model="formData.medicalCertificateNumber"
           placeholder="Certificate Number"
           class="w-full"
-          :class="{ 'p-invalid': errors.medicalCertificateNumber }"
+          :class="{ 'p-invalid': hasError('medicalCertificateNumber') }"
+          :disabled="isLoading"
         />
-       <small v-if="errors.medicalCertificateNumber" class="p-error">{{ errors.medicalCertificateNumber[0] }}</small>
+        <small v-if="hasError('medicalCertificateNumber')" class="p-error">
+          {{ getError('medicalCertificateNumber') }}
+        </small>
       </div>
 
+      <!-- Medical Certificate Expiry -->
       <div class="field">
-        <label for="medicalExpiry">Medical Cert. Expiry</label>
-        <Calendar 
-          v-model="driver.medicalCertificateExpiry" 
+        <label for="medicalCertificateExpiry">
+          Medical Cert. Expiry
+        </label>
+        <Calendar
+          id="medicalCertificateExpiry"
+          v-model="formData.medicalCertificateExpiry"
           dateFormat="yy-mm-dd"
           showIcon
           class="w-full"
-          :class="{ 'p-invalid': errors.medicalCertificateExpiry }"
+          :class="{ 'p-invalid': hasError('medicalCertificateExpiry') }"
+          :disabled="isLoading"
         />
-       <small v-if="errors.medicalCertificateExpiry" class="p-error">{{ errors.medicalCertificateExpiry[0] }}</small>
+        <small v-if="hasError('medicalCertificateExpiry')" class="p-error">
+          {{ getError('medicalCertificateExpiry') }}
+        </small>
       </div>
 
+      <!-- Emergency Contact -->
       <div class="field">
-        <label for="emergencyName">Emergency Contact</label>
-        <InputText 
-          v-model="driver.emergencyContactName" 
+        <label for="emergencyContactName">
+          Emergency Contact
+        </label>
+        <InputText
+          id="emergencyContactName"
+          v-model="formData.emergencyContactName"
           placeholder="Contact Name"
           class="w-full"
-          :class="{ 'p-invalid': errors.emergencyContactName }"
+          :class="{ 'p-invalid': hasError('emergencyContactName') }"
+          :disabled="isLoading"
+          autocomplete="name"
         />
-       <small v-if="errors.emergencyContactName" class="p-error">{{ errors.emergencyContactName[0] }}</small>
+        <small v-if="hasError('emergencyContactName')" class="p-error">
+          {{ getError('emergencyContactName') }}
+        </small>
       </div>
 
+      <!-- Emergency Phone -->
       <div class="field">
-        <label for="emergencyPhone">Emergency Phone</label>
-        <InputMask 
-          v-model="driver.emergencyContactPhone" 
-          mask="(999) 999-9999" 
+        <label for="emergencyContactPhone">
+          Emergency Phone
+        </label>
+        <InputMask
+          id="emergencyContactPhone"
+          v-model="formData.emergencyContactPhone"
+          mask="(999) 999-9999"
           placeholder="(123) 456-7890"
           class="w-full"
-          :class="{ 'p-invalid': errors.emergencyContactPhone }"
+          :class="{ 'p-invalid': hasError('emergencyContactPhone') }"
+          :disabled="isLoading"
+          autocomplete="tel"
         />
-       <small v-if="errors.emergencyContactPhone" class="p-error">{{ errors.emergencyContactPhone[0] }}</small>
+        <small v-if="hasError('emergencyContactPhone')" class="p-error">
+          {{ getError('emergencyContactPhone') }}
+        </small>
       </div>
 
+      <!-- Notes -->
       <div class="field col-span-2">
         <label for="notes">Notes</label>
-        <Textarea 
-          v-model="driver.notes" 
+        <Textarea
+          id="notes"
+          v-model="formData.notes"
           rows="3"
+          placeholder="Additional notes"
           class="w-full"
-          :class="{ 'p-invalid': errors.notes }"
+          :class="{ 'p-invalid': hasError('notes') }"
+          :disabled="isLoading"
         />
-       <small v-if="errors.notes" class="p-error">{{ errors.notes[0] }}</small>
+        <small v-if="hasError('notes')" class="p-error">
+          {{ getError('notes') }}
+        </small>
       </div>
     </div>
 
+    <!-- Dialog Footer -->
     <template #footer>
-      <Button 
-        label="Cancel" 
-        icon="pi pi-times" 
-        @click="$emit('cancel')"
-        class="p-button-text"
+      <Button
+        type="button"
+        label="Cancel"
+        icon="pi pi-times"
+        severity="secondary"
+        text
+        @click="handleCancel"
+        :disabled="isLoading"
       />
-      <Button 
-        label="Save" 
-        icon="pi pi-check" 
+      <Button
+        type="button"
+        label="Save"
+        icon="pi pi-check"
         @click="handleSave"
-        class="p-button-primary"
-        :disabled="!isFormValid"
+        :loading="isLoading"
+        :disabled="!isFormValid || isLoading"
       />
     </template>
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 
+interface DriverForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  dateOfBirth: Date | null;
+  hireDate: Date | null;
+  licenseNumber: string;
+  licenseExpiry: Date | null;
+  medicalCertificateNumber: string;
+  medicalCertificateExpiry: Date | null;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  notes: string;
+}
 
-import { ref, computed } from 'vue';
+type ValidationErrors = Record<string, string[]>;
 
-const props = defineProps<{ 
-  modelValue: boolean; 
-  driver: DriverForm; 
-  errors?: ValidationErrors; 
-  loading?: boolean; 
+const props = defineProps<{
+  modelValue: boolean;
+  driver: DriverForm;
+  errors?: ValidationErrors;
+  isLoading?: boolean;
 }>();
 
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean];
+  'update:driver': [driver: DriverForm];
+  save: [driver: DriverForm];
+  cancel: [];
+}>();
 
-const emit = defineEmits(['update:modelValue', 'save', 'cancel']);
+// Create a local reactive copy of the driver data
+const formData = ref<DriverForm>({ ...props.driver });
 
-const driver = ref({
-  firstName: '',
-  lastName: '',
-  email: '',
-  phoneNumber: '',
-  address: '',
-  dateOfBirth: null,
-  hireDate: null,
-  licenseNumber: '',
-  licenseExpiry: null,
-  medicalCertificateNumber: '',
-  medicalCertificateExpiry: null,
-  emergencyContactName: '',
-  emergencyContactPhone: '',
-  notes: ''
-});
+const today = ref(new Date());
+const isLoading = computed(() => props.isLoading ?? false);
+
+// Watch for changes to the driver prop and update the local copy
+watch(
+  () => props.driver,
+  (newDriver) => {
+    formData.value = { ...newDriver };
+  },
+  { deep: true }
+);
+
+// Watch for dialog visibility changes to reset form when opened
+watch(
+  () => props.modelValue,
+  (visible) => {
+    if (visible) {
+      formData.value = { ...props.driver };
+    }
+  }
+);
+
+// Emit updates to the parent whenever form data changes
+watch(
+  formData,
+  (newData) => {
+    emit('update:driver', newData);
+  },
+  { deep: true }
+);
 
 const isFormValid = computed(() => {
-  return (
-    driver.value.firstName &&
-    driver.value.lastName &&
-    driver.value.email &&
-    driver.value.dateOfBirth &&
-    driver.value.hireDate
+  return Boolean(
+    formData.value.firstName?.trim() &&
+    formData.value.lastName?.trim() &&
+    formData.value.email?.trim() &&
+    formData.value.dateOfBirth &&
+    formData.value.hireDate
   );
 });
 
-const handleSave = () => {
-  emit('save', driver.value);
+const hasError = (field: string): boolean => {
+  return Boolean(
+    props.errors?.[field] && 
+    props.errors[field].length > 0
+  );
+};
+
+const getError = (field: string): string => {
+  return props.errors?.[field]?.[0] ?? '';
+};
+
+const onDialogUpdate = (value: boolean): void => {
+  emit('update:modelValue', value);
+  if (!value) {
+    // Reset form when dialog closes
+    formData.value = { ...props.driver };
+  }
+};
+
+const handleCancel = (): void => {
+  if (isLoading.value) {
+    return;
+  }
+  emit('cancel');
   emit('update:modelValue', false);
 };
+
+const handleSave = (): void => {
+  if (!isFormValid.value || isLoading.value) {
+    return;
+  }
+  emit('save', formData.value);
+};
 </script>
+
 <style scoped>
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
   margin-bottom: 1rem;
 }
@@ -246,6 +413,7 @@ const handleSave = () => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .field label {
@@ -256,11 +424,19 @@ const handleSave = () => {
   grid-column: span 2;
 }
 
+.w-full {
+  width: 100%;
+}
+
+.p-error {
+  display: block;
+  margin-top: 0.25rem;
+}
+
 @media (max-width: 768px) {
   .form-grid {
     grid-template-columns: 1fr;
   }
-  
   .field.col-span-2 {
     grid-column: span 1;
   }
