@@ -3,7 +3,7 @@ import axios from 'axios';
 import store from './store';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5093/api',
+  baseURL: `${import.meta.env.VITE_API_URL}/api`,
   withCredentials: true,
   timeout: 30000,
 });
@@ -12,9 +12,11 @@ const api = axios.create({
 api.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   error => Promise.reject(error)
@@ -23,6 +25,7 @@ api.interceptors.request.use(
 // Response interceptor – refresh token on 401 and retry once
 api.interceptors.response.use(
   response => response,
+
   async error => {
     const originalRequest = error.config;
 
@@ -33,12 +36,12 @@ api.interceptors.response.use(
       try {
         const newToken = await store.dispatch('auth/refreshToken');
 
-        // ✅ Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
         return api(originalRequest);
       } catch (refreshError) {
-        // ❌ Refresh failed — logout user
         store.dispatch('auth/logout');
+
         return Promise.reject(refreshError);
       }
     }
